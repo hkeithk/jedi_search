@@ -8,31 +8,27 @@ function App() {
   const [results, setResults] = useState([]);
   const [requests, setRequests] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  //could probably use one setstate function holding both results and chars
   const [resultsCache, setResultsCache] = useState(new Map());
   const [charactersCache, setCharactersCache] = useState(new Map());
 
-  // ------------helper/update functioons -----
   const baseURL = 'https://swapi.dev/api/';
-
-  const updateCharactersCache = (key, value) => {
-    setCharactersCache(charactersCache.set(key, value));
-  };
-
-  const updateResultsCache = (key, value) => {
-    setResultsCache(resultsCache.set(key, value));
-  };
 
   // --------------Handlers and async---------
   const inputHandler = _.debounce((event) => {
     setInput(event.target.value);
   }, 500);
 
+  // would write a debounce funct for this _.debounce(debounceFn, 500)
   const fetchData = _.debounce(async () => {
     setLoading(true);
+    //validate with regex in the future
     const url = `${baseURL}people/?search=${input}`;
     try {
       const response = await axios.get(url);
 
+      //validate this with (regex?)
       const charIDs = response.data.results.map((item) =>
         item.url
           .slice(0, item.url.length - 1)
@@ -40,13 +36,13 @@ function App() {
           .pop()
       );
 
-      updateCharactersCache(charIDs, response.data.results);
-      updateResultsCache(input, charIDs);
+      setCharactersCache(charactersCache.set(charIDs, response.data.results));
+      setResultsCache(resultsCache.set(input, charIDs));
 
       setTimeout(() => {
         setRequests(requests + 1);
         setResults(response.data.results);
-      }, 300);
+      }, 0);
     } catch (err) {
       return <p>Error, please reload page</p>;
     }
@@ -57,33 +53,38 @@ function App() {
     if (resultsCache.has(input)) {
       let key = resultsCache.get(input);
       setResults(charactersCache.get(key));
-    } else {
+    } else if (!(input === '')) {
       fetchData();
+    } else {
+      setResults([]);
     }
   }, [input]);
-
-  console.log(resultsCache);
 
   return (
     <div>
       <header>
         <input autoFocus onChange={inputHandler} />
       </header>
-      {loading ? <h2>Loading...</h2> : <></>}
-      <div>
-        <h2>You have made {requests} requests so far</h2>
-        <h3>Search Results</h3>
-        <div>
-          {results.map((character, index) => (
-            <div key={index}>
-              <h4>
-                {character.name} was born in {character.birth_year}
-              </h4>
-              <hr />
+      {loading ? (
+        <h2>Loading...</h2>
+      ) : (
+        <>
+          <div>
+            <h2>You have made {requests} requests so far</h2>
+            <h3>Search Results</h3>
+            <div>
+              {results.map((character, index) => (
+                <div key={index}>
+                  <h4>
+                    {character.name} was born in {character.birth_year}
+                  </h4>
+                  <hr />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
